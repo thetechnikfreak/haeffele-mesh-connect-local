@@ -38,8 +38,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     gateway_topic = entry.data[CONF_GATEWAY_TOPIC]
     mqtt_host = entry.data[CONF_HOST]
     mqtt_port = entry.data[CONF_PORT]
+    mqtt_username = entry.data.get("username")
+    mqtt_password = entry.data.get("password")
 
-    coordinator = HaefeleMeshCoordinator(hass, entry, mqtt_host, mqtt_port, gateway_topic)
+    coordinator = HaefeleMeshCoordinator(
+        hass, entry, mqtt_host, mqtt_port, gateway_topic, mqtt_username, mqtt_password
+    )
     
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -77,6 +81,8 @@ class HaefeleMeshCoordinator:
         mqtt_host: str,
         mqtt_port: int,
         gateway_topic: str,
+        mqtt_username: str | None = None,
+        mqtt_password: str | None = None,
     ):
         """Initialize the coordinator."""
         self.hass = hass
@@ -84,6 +90,8 @@ class HaefeleMeshCoordinator:
         self.mqtt_host = mqtt_host
         self.mqtt_port = mqtt_port
         self.gateway_topic = gateway_topic
+        self.mqtt_username = mqtt_username
+        self.mqtt_password = mqtt_password
         self.mqtt_client = None
         self.lights = {}
         self.groups = {}
@@ -115,6 +123,12 @@ class HaefeleMeshCoordinator:
             )
 
         self.mqtt_client = mqtt.Client()
+        
+        # Set authentication if provided
+        if self.mqtt_username and self.mqtt_password:
+            self.mqtt_client.username_pw_set(self.mqtt_username, self.mqtt_password)
+            _LOGGER.info("MQTT authentication configured for user: %s", self.mqtt_username)
+        
         self.mqtt_client.on_connect = on_connect
         self.mqtt_client.on_message = on_message
 

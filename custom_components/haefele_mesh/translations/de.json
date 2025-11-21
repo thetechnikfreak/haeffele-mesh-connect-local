@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Häfele Mesh Gateway verbinden",
+        "description": "Wählen Sie, wie Sie MQTT konfigurieren möchten",
+        "data": {
+          "setup_type": "Setup-Typ"
+        }
+      },
+      "automatic": {
+        "title": "Automatisches Setup (Mosquitto)",
+        "description": "Ein sicherer MQTT-Benutzer wird automatisch erstellt. Sie erhalten Zugangsdaten für die Häfele Mesh Connect App.",
+        "data": {
+          "gateway_topic": "Gateway MQTT-Topic"
+        },
+        "data_description": {
+          "gateway_topic": "Das MQTT-Basis-Topic (Standard: Mesh)"
+        }
+      },
+      "manual": {
+        "title": "Manuelle MQTT-Konfiguration",
+        "description": "MQTT-Broker-Verbindung manuell konfigurieren",
+        "data": {
+          "host": "MQTT-Broker Host",
+          "port": "MQTT-Broker Port",
+          "username": "Benutzername (optional)",
+          "password": "Passwort (optional)",
+          "gateway_topic": "Gateway MQTT-Topic"
+        },
+        "data_description": {
+          "host": "IP-Adresse oder Hostname des MQTT-Brokers",
+          "port": "MQTT-Broker-Port (üblicherweise 1883)",
+          "gateway_topic": "Das MQTT-Basis-Topic (Standard: Mesh)"
+        }
+      },
+      "show_credentials": {
+        "title": "MQTT-Zugangsdaten generiert",
+        "description": "{instructions}"
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum MQTT-Broker fehlgeschlagen",
+      "unknown": "Unerwarteter Fehler aufgetreten"
+    },
+    "abort": {
+      "already_configured": "Dieses Gateway ist bereits konfiguriert"
+    }
+  }
+}
