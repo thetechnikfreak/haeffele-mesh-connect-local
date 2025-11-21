@@ -50,6 +50,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Connect to MQTT
     await coordinator.async_connect()
 
+    # Request device discovery
+    await coordinator.async_request_discovery()
+
+    # Register services
+    async def request_discovery(call):
+        """Request device discovery from MQTT broker."""
+        await coordinator.async_request_discovery()
+    
+    hass.services.async_register(DOMAIN, "request_discovery", request_discovery)
+
     # Forward the setup to the platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -106,6 +116,7 @@ class HaefeleMeshCoordinator:
             """Handle MQTT connection."""
             if rc == 0:
                 _LOGGER.info("Connected to MQTT broker at %s:%s", self.mqtt_host, self.mqtt_port)
+                _LOGGER.info("Subscribing to topics with base: %s", self.gateway_topic)
                 # Subscribe to discovery topics
                 client.subscribe(f"{self.gateway_topic}/lights")
                 client.subscribe(f"{self.gateway_topic}/groups")
@@ -113,6 +124,9 @@ class HaefeleMeshCoordinator:
                 # Subscribe to status updates
                 client.subscribe(f"{self.gateway_topic}/lights/+/status")
                 client.subscribe(f"{self.gateway_topic}/groups/+/status")
+                # Subscribe to all messages for debugging
+                client.subscribe(f"{self.gateway_topic}/#")
+                _LOGGER.info("MQTT subscriptions complete")
             else:
                 _LOGGER.error("Failed to connect to MQTT broker, return code %s", rc)
 
@@ -144,15 +158,23 @@ class HaefeleMeshCoordinator:
             await self.hass.async_add_executor_job(self.mqtt_client.loop_stop)
             await self.hass.async_add_executor_job(self.mqtt_client.disconnect)
 
+    async def async_request_discovery(self):
+        """Request device discovery from MQTT broker."""
+        _LOGGER.info("Requesting device discovery on topic: %s/discover", self.gateway_topic)
+        discovery_topic = f"{self.gateway_topic}/discover"
+        await self.hass.async_add_executor_job(self.publish, discovery_topic, "request")
+        _LOGGER.info("Discovery request sent. Current devices - Lights: %d, Groups: %d, Scenes: %d", 
+                     len(self.lights), len(self.groups), len(self.scenes))
+
     def _handle_message(self, topic: str, payload: str):
         """Handle incoming MQTT message."""
+        _LOGGER.info("Received MQTT message on topic: %s with payload: %s", topic, payload)
+        
         try:
             data = json.loads(payload) if payload else None
         except json.JSONDecodeError:
-            _LOGGER.error("Failed to parse JSON from topic %s: %s", topic, payload)
-            return
-
-        _LOGGER.debug("Received MQTT message on topic %s: %s", topic, data)
+            _LOGGER.warning("Failed to parse JSON from topic %s: %s (treating as string)", topic, payload)
+            data = payload
 
         # Handle discovery messages
         if topic == f"{self.gateway_topic}/lights":
@@ -175,10 +197,17 @@ class HaefeleMeshCoordinator:
             return
         
         for light in lights:
-            device_name = light.get("name")
+            device_name = light.get("device_name")
             if device_name:
+                # Parse device capabilities from device_types
+                device_types = light.get("device_types", [])
+                light["supportsColorTemperature"] = "Multiwhite" in device_types
+                light["supportsColor"] = "RGB" in device_types or "RGBW" in device_types
+                light["supports_ctl"] = "Multiwhite" in device_types
+                
                 self.lights[device_name] = light
-                _LOGGER.info("Discovered light: %s", device_name)
+                _LOGGER.info("Discovered light: %s (addr: %s, types: %s, location: %s)", 
+                           device_name, light.get("device_addr"), device_types, light.get("location"))
 
     def _handle_groups_discovery(self, groups: list):
         """Handle groups discovery."""
@@ -186,10 +215,17 @@ class HaefeleMeshCoordinator:
             return
         
         for group in groups:
-            group_name = group.get("name")
+            group_name = group.get("group_name")
             if group_name:
+                # Groups support all features
+                group["supportsColorTemperature"] = True
+                group["supportsColor"] = True
+                group["supports_ctl"] = True
+                group["supports_hsl"] = True
+                
                 self.groups[group_name] = group
-                _LOGGER.info("Discovered group: %s", group_name)
+                _LOGGER.info("Discovered group: %s (addr: %s, devices: %s)", 
+                           group_name, group.get("group_main_addr"), group.get("devices"))
 
     def _handle_scenes_discovery(self, scenes: list):
         """Handle scenes discovery."""
@@ -197,10 +233,11 @@ class HaefeleMeshCoordinator:
             return
         
         for scene in scenes:
-            scene_name = scene.get("name")
+            scene_name = scene.get("scene_name")
             if scene_name:
                 self.scenes[scene_name] = scene
-                _LOGGER.info("Discovered scene: %s", scene_name)
+                _LOGGER.info("Discovered scene: %s (id: %s, groups: %s)", 
+                           scene_name, scene.get("scene_id"), scene.get("groups"))
 
     def _handle_status_update(self, topic: str, data: dict):
         """Handle status update."""

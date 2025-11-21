@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     ColorMode,
     LightEntity,
@@ -17,8 +17,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.color import (
     color_hs_to_RGB,
     color_RGB_to_hs,
-    color_temperature_kelvin_to_mired,
-    color_temperature_mired_to_kelvin,
 )
 
 from .const import DOMAIN
@@ -91,8 +89,8 @@ class HaefeleMeshLight(LightEntity):
         # Check if device supports color temperature
         if device_info.get("supportsColorTemperature") or device_info.get("supports_ctl"):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
-            self._attr_min_mireds = color_temperature_kelvin_to_mired(20000)
-            self._attr_max_mireds = color_temperature_kelvin_to_mired(800)
+            self._attr_min_color_temp_kelvin = 800
+            self._attr_max_color_temp_kelvin = 20000
         
         # Check if device supports color
         if device_info.get("supportsColor") or device_info.get("supports_hsl"):
@@ -109,11 +107,15 @@ class HaefeleMeshLight(LightEntity):
     @property
     def device_info(self):
         """Return device information."""
+        device_types = self._device_info.get("device_types", [])
+        model = ", ".join(device_types) if device_types else "Mesh Device"
+        
         return {
             "identifiers": {(DOMAIN, self._attr_unique_id)},
             "name": self._name,
             "manufacturer": "Häfele",
-            "model": self._device_info.get("model", "Mesh Device"),
+            "model": model,
+            "suggested_area": self._device_info.get("location"),
             "via_device": (DOMAIN, self._coordinator.entry.entry_id),
         }
 
@@ -164,8 +166,8 @@ class HaefeleMeshLight(LightEntity):
         return None
 
     @property
-    def color_temp(self) -> int | None:
-        """Return the CT color value in mireds."""
+    def color_temp_kelvin(self) -> int | None:
+        """Return the CT color value in Kelvin."""
         if ColorMode.COLOR_TEMP not in self._attr_supported_color_modes:
             return None
         
@@ -173,8 +175,7 @@ class HaefeleMeshLight(LightEntity):
         temperature = status.get("temperature")
         
         if temperature is not None:
-            # Convert from Kelvin to mireds
-            return color_temperature_kelvin_to_mired(temperature)
+            return int(temperature)
         
         return None
 
@@ -182,7 +183,7 @@ class HaefeleMeshLight(LightEntity):
         """Turn the light on."""
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         hs_color = kwargs.get(ATTR_HS_COLOR)
-        color_temp = kwargs.get(ATTR_COLOR_TEMP)
+        color_temp_kelvin = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
 
         if hs_color is not None and ColorMode.HS in self._attr_supported_color_modes:
             # Set HSL
@@ -196,14 +197,13 @@ class HaefeleMeshLight(LightEntity):
                 lightness,
             )
             self._attr_color_mode = ColorMode.HS
-        elif color_temp is not None and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
+        elif color_temp_kelvin is not None and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
             # Set CTL
-            temperature = color_temperature_mired_to_kelvin(color_temp)
             lightness = (brightness / 255.0) if brightness is not None else 1.0
             await self._coordinator.async_set_ctl(
                 self._entity_type,
                 self._name,
-                int(temperature),
+                int(color_temp_kelvin),
                 lightness,
             )
             self._attr_color_mode = ColorMode.COLOR_TEMP
@@ -237,8 +237,8 @@ class HaefeleMeshLight(LightEntity):
             self._device_info["status"]["hue"] = int(hue)
             self._device_info["status"]["saturation"] = saturation / 100.0
         
-        if color_temp is not None:
-            self._device_info["status"]["temperature"] = color_temperature_mired_to_kelvin(color_temp)
+        if color_temp_kelvin is not None:
+            self._device_info["status"]["temperature"] = int(color_temp_kelvin)
         
         self.async_write_ha_state()
 

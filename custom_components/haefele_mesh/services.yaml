@@ -1,0 +1,4 @@
+request_discovery:
+  name: Request discovery
+  description: Request device discovery from the Häfele Mesh MQTT broker
+  fields: {}
