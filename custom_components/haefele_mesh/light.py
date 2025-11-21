@@ -181,14 +181,14 @@ class HaefeleMeshLight(LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
-        brightness = kwargs.get(ATTR_BRIGHTNESS)
+        brightness = kwargs.get(ATTR_BRIGHTNESS, 255)  # Default to 100% brightness
         hs_color = kwargs.get(ATTR_HS_COLOR)
         color_temp_kelvin = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
 
         if hs_color is not None and ColorMode.HS in self._attr_supported_color_modes:
             # Set HSL
             hue, saturation = hs_color
-            lightness = (brightness / 255.0) if brightness is not None else 1.0
+            lightness = brightness / 255.0
             await self._coordinator.async_set_hsl(
                 self._entity_type,
                 self._name,
@@ -199,7 +199,7 @@ class HaefeleMeshLight(LightEntity):
             self._attr_color_mode = ColorMode.HS
         elif color_temp_kelvin is not None and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
             # Set CTL
-            lightness = (brightness / 255.0) if brightness is not None else 1.0
+            lightness = brightness / 255.0
             await self._coordinator.async_set_ctl(
                 self._entity_type,
                 self._name,
@@ -207,20 +207,13 @@ class HaefeleMeshLight(LightEntity):
                 lightness,
             )
             self._attr_color_mode = ColorMode.COLOR_TEMP
-        elif brightness is not None:
-            # Set brightness only
+        else:
+            # Set brightness (always set to 100% by default)
             lightness = brightness / 255.0
             await self._coordinator.async_set_lightness(
                 self._entity_type,
                 self._name,
                 lightness,
-            )
-        else:
-            # Just turn on
-            await self._coordinator.async_set_power(
-                self._entity_type,
-                self._name,
-                True,
             )
 
         # Update status optimistically
@@ -228,9 +221,7 @@ class HaefeleMeshLight(LightEntity):
             self._device_info["status"] = {}
         
         self._device_info["status"]["onOff"] = True
-        
-        if brightness is not None:
-            self._device_info["status"]["lightness"] = brightness / 255.0
+        self._device_info["status"]["lightness"] = brightness / 255.0
         
         if hs_color is not None:
             hue, saturation = hs_color
