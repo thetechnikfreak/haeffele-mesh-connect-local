@@ -1,0 +1,13 @@
+{
+  "domain": "haefele_mesh",
+  "name": "Häfele Mesh Local",
+  "codeowners": ["@thetechnikfreak"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/thetechnikfreak/haefele-mesh-connect-local",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/thetechnikfreak/haefele-mesh-connect-local/issues",
+  "requirements": ["paho-mqtt>=1.6.1"],
+  "version": "1.0.0"
+}
