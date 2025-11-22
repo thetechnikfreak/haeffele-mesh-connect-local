@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Häfele Mesh Gateway",
+        "description": "Choose how you want to configure MQTT",
+        "data": {
+          "setup_type": "Setup Type"
+        }
+      },
+      "automatic": {
+        "title": "Automatic Setup (Mosquitto)",
+        "description": "A secure MQTT user will be created automatically. You will receive credentials for the Häfele Mesh Connect App.",
+        "data": {
+          "gateway_topic": "Gateway MQTT Topic"
+        },
+        "data_description": {
+          "gateway_topic": "The MQTT base topic (default: Mesh)"
+        }
+      },
+      "manual": {
+        "title": "Manual MQTT Configuration",
+        "description": "Configure MQTT broker connection manually",
+        "data": {
+          "host": "MQTT Broker Host",
+          "port": "MQTT Broker Port",
+          "username": "Username (optional)",
+          "password": "Password (optional)",
+          "gateway_topic": "Gateway MQTT Topic"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the MQTT broker",
+          "port": "MQTT broker port (typically 1883)",
+          "gateway_topic": "The MQTT base topic (default: Mesh)"
+        }
+      },
+      "show_credentials": {
+        "title": "MQTT Credentials Generated",
+        "description": "{instructions}"
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to MQTT broker",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This gateway is already configured"
+    }
+  }
+}
