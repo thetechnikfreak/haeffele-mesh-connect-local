@@ -59,7 +59,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.async_request_discovery()
     
     hass.services.async_register(DOMAIN, "request_discovery", request_discovery)
-
+    device_registry = dr.async_get(hass)
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="Häfele Mesh Gateway",
+        manufacturer="Häfele",
+        model="Mesh Gateway",
+    )
     # Forward the setup to the platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
