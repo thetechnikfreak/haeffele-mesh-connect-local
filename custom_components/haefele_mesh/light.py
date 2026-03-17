@@ -79,23 +79,25 @@ class HaefeleMeshLight(LightEntity):
         self._entity_type = entity_type
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{entity_type}_{name}"
         self._attr_name = name
-        
+
         # Determine supported color modes based on device capabilities
         self._attr_supported_color_modes = set()
-        
-        # All devices support brightness
-        self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
-        
+
+        # Check if device supports color (highest priority)
+        if device_info.get("supportsColor") or device_info.get("supports_hsl"):
+            self._attr_supported_color_modes.add(ColorMode.HS)
+
         # Check if device supports color temperature
         if device_info.get("supportsColorTemperature") or device_info.get("supports_ctl"):
             self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
             self._attr_min_color_temp_kelvin = 800
             self._attr_max_color_temp_kelvin = 20000
-        
-        # Check if device supports color
-        if device_info.get("supportsColor") or device_info.get("supports_hsl"):
-            self._attr_supported_color_modes.add(ColorMode.HS)
-        
+
+        # Only fall back to BRIGHTNESS if no richer mode is supported
+        # (BRIGHTNESS must not be combined with COLOR_TEMP or HS)
+        if not self._attr_supported_color_modes:
+            self._attr_supported_color_modes.add(ColorMode.BRIGHTNESS)
+
         # Set default color mode
         if ColorMode.HS in self._attr_supported_color_modes:
             self._attr_color_mode = ColorMode.HS
