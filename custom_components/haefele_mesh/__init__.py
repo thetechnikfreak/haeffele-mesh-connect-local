@@ -208,9 +208,9 @@ class HaefeleMeshCoordinator:
             if device_name:
                 # Parse device capabilities from device_types
                 device_types = light.get("device_types", [])
-                light["supportsColorTemperature"] = "Multiwhite" in device_types
-                light["supportsColor"] = "RGB" in device_types or "RGBW" in device_types
-                light["supports_ctl"] = "Multiwhite" in device_types
+                light["supportsColorTemperature"] = "multiwhite" in device_types
+                light["supportsColor"] = "rgb" in device_types or "rgbw" in device_types
+                light["supports_ctl"] = "multiwhite" in device_types
                 
                 self.lights[device_name] = light
                 _LOGGER.info("Discovered light: %s (addr: %s, types: %s, location: %s)", 
@@ -275,6 +275,8 @@ class HaefeleMeshCoordinator:
         if self.mqtt_client and self.mqtt_client.is_connected():
             if isinstance(payload, dict):
                 payload = json.dumps(payload)
+            elif isinstance(payload, bool):
+                payload = "true" if payload else "false"
             self.mqtt_client.publish(topic, payload)
         else:
             _LOGGER.error("MQTT client not connected")
@@ -282,7 +284,7 @@ class HaefeleMeshCoordinator:
     async def async_set_power(self, entity_type: str, name: str, state: bool):
         """Set power state."""
         topic = f"{self.gateway_topic}/{entity_type}/{name}/power"
-        payload = {"onOff": "on" if state else "off"}
+        payload = state  # API expects a plain boolean (true/false) or "on"/"off"
         await self.hass.async_add_executor_job(self.publish, topic, payload)
 
     async def async_set_lightness(self, entity_type: str, name: str, lightness: float):

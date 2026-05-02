@@ -183,9 +183,16 @@ class HaefeleMeshLight(LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the light on."""
-        brightness = kwargs.get(ATTR_BRIGHTNESS, 255)  # Default to 100% brightness
+        brightness = kwargs.get(ATTR_BRIGHTNESS, 255)
         hs_color = kwargs.get(ATTR_HS_COLOR)
         color_temp_kelvin = kwargs.get(ATTR_COLOR_TEMP_KELVIN)
+
+        # Always send power on first
+        await self._coordinator.async_set_power(
+            self._entity_type,
+            self._name,
+            True,
+        )
 
         if hs_color is not None and ColorMode.HS in self._attr_supported_color_modes:
             # Set HSL
